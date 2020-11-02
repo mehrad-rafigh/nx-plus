@@ -184,6 +184,11 @@ function addJest(options: NormalizedSchema): Rule {
       return json;
     }),
     (tree: Tree) => {
+      const tsOrBabelTransform = options.babel
+        ? `'^.+\\.[tj]sx?$': ['babel-jest', { cwd: __dirname, configFile: './babel.config.js' }]`
+        : `'^.+\\.tsx?$': 'ts-jest'`;
+      const getVueJestPath = (file: string) =>
+        options.isVue3 ? `'<rootDir>/${file}'` : '`${__dirname}/' + file + '`';
       const content = tags.stripIndent`
         module.exports = {
           displayName: '${options.projectName}',
@@ -192,16 +197,24 @@ function addJest(options: NormalizedSchema): Rule {
             '^.+\\.vue$': 'vue-jest',
             '.+\\.(css|styl|less|sass|scss|svg|png|jpg|ttf|woff|woff2)$':
               'jest-transform-stub',
-            '^.+\\.tsx?$': 'ts-jest'
+            ${tsOrBabelTransform},
           },
           moduleFileExtensions: ["ts", "tsx", "vue", "js", "json"],
           coverageDirectory: '${offsetFromRoot(options.projectRoot)}coverage/${
         options.projectRoot
       }',
           snapshotSerializers: ['jest-serializer-vue'],
-          globals: { 'ts-jest': { tsConfig: '<rootDir>/tsconfig.spec.json' }, 'vue-jest': { tsConfig: '${
-            options.projectRoot
-          }/tsconfig.spec.json' } },
+          globals: {
+            'ts-jest': { tsConfig: '<rootDir>/tsconfig.spec.json' },
+            'vue-jest': {
+              tsConfig: ${getVueJestPath('tsconfig.spec.json')},
+              ${
+                options.babel
+                  ? `babelConfig: ${getVueJestPath('babel.config.js')},`
+                  : ''
+              }
+            }
+          },
         };
       `;
       tree.overwrite(`${options.projectRoot}/jest.config.js`, content);
@@ -266,6 +279,21 @@ function addPostInstall() {
   });
 }
 
+function addBabel(options: NormalizedSchema) {
+  const babelConfigPath = `${options.projectRoot}/babel.config.js`;
+  return chain([
+    (tree: Tree) =>
+      tree.create(
+        babelConfigPath,
+        tags.stripIndent`
+          module.exports = {
+            presets: ["@vue/cli-plugin-babel/preset"]
+          };`
+      ),
+    addDepsToPackageJson({}, { '@vue/cli-plugin-babel': '~4.5.0' }),
+  ]);
+}
+
 export default function (options: ApplicationSchematicSchema): Rule {
   return (host: Tree) => {
     const normalizedOptions = normalizeOptions(host, options);
@@ -320,6 +348,7 @@ export default function (options: ApplicationSchematicSchema): Rule {
       options.e2eTestRunner === 'cypress'
         ? addCypress(normalizedOptions)
         : noop(),
+      options.babel ? addBabel(normalizedOptions) : noop(),
       addPostInstall(),
       addDepsToPackageJson(
         {

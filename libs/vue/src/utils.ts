@@ -74,3 +74,10 @@ export function resolveConfigureWebpack(projectRoot: string) {
     ? require(getSystemPath(configureWebpackPath))
     : undefined;
 }
+
+export function getBabelConfig(projectRoot: string) {
+  const babelConfig = join(normalize(projectRoot), 'babel.config.js');
+  const host = new virtualFs.SyncDelegateHost(new NodeJsSyncHost());
+
+  return host.exists(babelConfig) ? getSystemPath(babelConfig) : undefined;
+}

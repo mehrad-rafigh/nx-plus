@@ -151,3 +151,23 @@ export function modifyCopyAssets(
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     .use(require('copy-webpack-plugin'), [transformedAssetPatterns]);
 }
+
+export function modifyBabelLoader(
+  config,
+  babelConfig: string,
+  context: BuilderContext
+) {
+  const babelLoaderCachePath = getSystemPath(
+    join(normalize(context.workspaceRoot), 'node_modules/.cache/babel-loader')
+  );
+  ['js', 'ts', 'tsx'].forEach((ext) =>
+    config.module
+      .rule(ext)
+      .use('babel-loader')
+      .tap((options) => ({
+        ...options,
+        cacheDirectory: babelLoaderCachePath,
+        configFile: babelConfig,
+      }))
+  );
+}
