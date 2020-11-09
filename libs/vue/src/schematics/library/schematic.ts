@@ -105,7 +105,7 @@ function addJest(options: NormalizedSchema): Rule {
       testEnvironment: 'jsdom',
       babelJest: false,
     }),
-    options.isVue3
+    !options.isVue3
       ? updateJsonInTree(
           `${options.projectRoot}/tsconfig.spec.json`,
           (json) => {

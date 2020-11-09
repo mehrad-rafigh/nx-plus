@@ -173,16 +173,23 @@ function addJest(options: NormalizedSchema): Rule {
       testEnvironment: 'jsdom',
       babelJest: false,
     }),
-    updateJsonInTree(`${options.projectRoot}/tsconfig.spec.json`, (json) => {
-      json.include = json.include.filter((pattern) => !/\.jsx?$/.test(pattern));
-      json.compilerOptions = {
-        ...json.compilerOptions,
-        jsx: 'preserve',
-        esModuleInterop: true,
-        allowSyntheticDefaultImports: true,
-      };
-      return json;
-    }),
+    !options.isVue3
+      ? updateJsonInTree(
+          `${options.projectRoot}/tsconfig.spec.json`,
+          (json) => {
+            json.include = json.include.filter(
+              (pattern) => !/\.jsx?$/.test(pattern)
+            );
+            json.compilerOptions = {
+              ...json.compilerOptions,
+              jsx: 'preserve',
+              esModuleInterop: true,
+              allowSyntheticDefaultImports: true,
+            };
+            return json;
+          }
+        )
+      : noop(),
     (tree: Tree) => {
       const tsOrBabelTransform = options.babel
         ? `'^.+\\.[tj]sx?$': ['babel-jest', { cwd: __dirname, configFile: './babel.config.js' }]`
